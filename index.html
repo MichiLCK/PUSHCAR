@@ -111,6 +111,22 @@
   .slider output { font-family: var(--round); font-size: 18px; min-width: 52px; text-align: right; }
   .slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--glow); height: 28px; }
 
+  .horn {
+    display: block; width: 132px; height: 132px; margin: 6px auto 0; border-radius: 50%;
+    border: 0; cursor: pointer; font-family: var(--round); font-size: 26px; color: var(--night);
+    background: radial-gradient(circle at 35% 30%, #FFE3EE, var(--glow));
+    box-shadow: 0 10px 0 #7A1240, 0 14px 30px rgba(255, 20, 100, .35);
+    transition: transform .06s, box-shadow .06s;
+  }
+  .horn:active { transform: translateY(8px); box-shadow: 0 2px 0 #7A1240, 0 6px 16px rgba(255, 20, 100, .35); }
+  .horn:disabled { filter: grayscale(.8); opacity: .5; cursor: default; }
+  .patterns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 6px 0 10px; }
+  .pat {
+    padding: 10px 2px; border: 0; border-radius: 12px; cursor: pointer;
+    background: var(--dusk-2); color: var(--milk); font-family: var(--body); font-size: 13px;
+  }
+  .pat[aria-pressed="true"] { background: var(--milk); color: var(--night); }
+  .mute-note { color: #FFB3BD; }
   fieldset { border: 0; margin: 0; padding: 0; }
   fieldset:disabled { opacity: .45; }
   .safety { margin: 28px 0 0; color: var(--haze); font-size: 13px; text-align: center; }
@@ -139,6 +155,7 @@
     </div>
     <button class="connect" id="connectBtn">연결하기</button>
     <div class="linkstate" id="linkState">대시보드 전원을 켠 뒤 연결하기를 눌러 주세요</div>
+    <button class="horn" id="horn" disabled aria-label="경적 울리기">빵빵</button>
   </section>
 
   <section class="front" id="front" aria-live="polite">
@@ -163,6 +180,13 @@
       <label for="lon">차 밑 조명 켜기</label>
       <span class="switch"><input type="checkbox" id="lon" role="switch"><span></span></span>
     </div>
+    <div class="patterns" id="patterns" role="group" aria-label="조명 패턴">
+      <button class="pat" data-pat="0" aria-pressed="false">숨쉬기</button>
+      <button class="pat" data-pat="1" aria-pressed="false">계속</button>
+      <button class="pat" data-pat="2" aria-pressed="false">달리기</button>
+      <button class="pat" data-pat="3" aria-pressed="false">무지개</button>
+      <button class="pat" data-pat="4" aria-pressed="false">반짝</button>
+    </div>
     <div class="swatches" id="swatches" role="group" aria-label="조명 색">
       <div class="picker" title="직접 고르기"><input type="color" id="custom" value="#ff1464" aria-label="직접 색 고르기"></div>
     </div>
@@ -171,12 +195,39 @@
       <label for="bri">조명 밝기</label><output id="briOut">35%</output>
       <input type="range" id="bri" min="5" max="35" step="1" value="35">
     </div>
+    <div class="slider">
+      <label for="onT" id="onLabel">켜지는 시간</label><output id="onOut">3.0초</output>
+      <input type="range" id="onT" min="1" max="10" step="0.5" value="3">
+    </div>
+    <div class="slider" id="offRow">
+      <label for="offT">쉬는 시간</label><output id="offOut">2.0초</output>
+      <input type="range" id="offT" min="0" max="10" step="0.5" value="2">
+    </div>
+    <div class="slider" id="fadeRow">
+      <label for="fadeT">서서히 밝아지고 어두워지는 시간</label><output id="fadeOut">0.8초</output>
+      <input type="range" id="fadeT" min="0" max="3" step="0.1" value="0.8">
+    </div>
 
     <h2>소리</h2>
+    <div class="row">
+      <label for="snd">소리 켜기<p class="hint" id="sndHint">끄면 경고음도 꺼져요. 경고 조명과 화면 경고는 계속 동작하고, 대시보드를 다시 켜면 소리가 자동으로 켜져요.</p></label>
+      <span class="switch"><input type="checkbox" id="snd" role="switch" checked><span></span></span>
+    </div>
     <div class="slider">
-      <label for="vol">경고음 크기</label><output id="volOut">8</output>
+      <label for="vol">소리 크기</label><output id="volOut">8</output>
       <input type="range" id="vol" min="5" max="30" step="1" value="8">
     </div>
+
+    <h2>경고 거리</h2>
+    <div class="slider">
+      <label for="wdd">위험 (빨강, 연속음)</label><output id="wddOut">15cm</output>
+      <input type="range" id="wdd" min="10" max="30" step="1" value="15">
+    </div>
+    <div class="slider">
+      <label for="wdc">주의 (앰버, 삡삡삡)</label><output id="wdcOut">30cm</output>
+      <input type="range" id="wdc" min="15" max="80" step="1" value="30">
+    </div>
+    <p class="hint">위험 거리는 10cm보다 짧게 할 수 없고, 주의 거리는 위험 거리보다 5cm 이상 멀어야 해요.</p>
 
     <h2>화면</h2>
     <div class="slider">
@@ -189,7 +240,7 @@
     </div>
   </fieldset>
 
-  <p class="safety">장애물 경고음과 경고 조명은 안전을 위해 앱에서 끌 수 없어요.</p>
+  <p class="safety">경고 조명과 화면 경고는 안전을 위해 앱에서 끌 수 없어요.</p>
 </main>
 
 <script>
@@ -211,7 +262,8 @@ const PRESETS = [
 const $ = (id) => document.getElementById(id);
 const enc = new TextEncoder();
 let device = null, cmdChar = null, writeChain = Promise.resolve();
-let cfg = { r: 255, g: 20, b: 100, bri: 35, lon: 1, vol: 8, bl: 70, stby: 0 };
+let cfg = { r: 255, g: 20, b: 100, bri: 35, lon: 1, vol: 8, bl: 70, stby: 0, snd: 1, synced: 0,
+            onMs: 3000, offMs: 2000, fadeMs: 800, pat: 0, wdc: 300, wdd: 150 };
 let level = 0;
 
 // ---------- 화면 준비 ----------
@@ -255,6 +307,9 @@ $("connectBtn").addEventListener("click", async () => {
     onConfig(await conf.readValue());
     onStatus(await stat.readValue());
     $("remote").disabled = false;
+    $("horn").disabled = false;
+    // 폰 시간을 대시보드로 보내기 (TFT 날짜, 시간 표시)
+    send(`TIME ${Math.floor(Date.now() / 1000)} ${-new Date().getTimezoneOffset()}`);
     $("connectBtn").textContent = "연결 끊기";
     $("connectBtn").classList.add("on");
     setLink(`${device.name || "PUSHCAR-DASH"}에 연결됐어요. 처음 조작할 때 PIN 입력 창이 뜨면 대시보드 PIN을 입력하세요.`);
@@ -267,6 +322,7 @@ $("connectBtn").addEventListener("click", async () => {
 function onDisconnected() {
   cmdChar = null;
   $("remote").disabled = true;
+  $("horn").disabled = true;
   $("connectBtn").textContent = "다시 연결하기";
   $("connectBtn").classList.remove("on");
   setLink("연결이 끊겼어요");
@@ -305,14 +361,73 @@ $("custom").addEventListener("change", (e) => {
 $("lon").addEventListener("change", (e) => { cfg.lon = e.target.checked ? 1 : 0; send(`LON ${cfg.lon}`); paintGlow(); });
 $("stby").addEventListener("change", (e) => { cfg.stby = e.target.checked ? 1 : 0; send(`STBY ${cfg.stby}`); paintGlow(); });
 $("bri").addEventListener("input", (e) => { cfg.bri = +e.target.value; $("briOut").textContent = cfg.bri + "%"; paintGlow(); throttleSend("bri", () => `BRI ${cfg.bri}`); });
+$("horn").addEventListener("click", () => send("SFX 1"));
+$("snd").addEventListener("change", (e) => { cfg.snd = e.target.checked ? 1 : 0; send(`SND ${cfg.snd}`); showMute(); });
+document.querySelectorAll(".pat").forEach((b) => b.addEventListener("click", () => {
+  cfg.pat = +b.dataset.pat; send(`PAT ${cfg.pat}`); showPattern(); paintGlow();
+}));
+function sendTiming() { throttleSend("btm", () => `BTM ${cfg.onMs} ${cfg.offMs} ${cfg.fadeMs}`); }
+$("onT").addEventListener("input", (e) => {
+  cfg.onMs = Math.round(+e.target.value * 1000);
+  if (cfg.fadeMs > cfg.onMs / 2) { cfg.fadeMs = cfg.onMs / 2; $("fadeT").value = cfg.fadeMs / 1000; }
+  showTiming(); sendTiming(); paintGlow();
+});
+$("offT").addEventListener("input", (e) => { cfg.offMs = Math.round(+e.target.value * 1000); showTiming(); sendTiming(); paintGlow(); });
+$("fadeT").addEventListener("input", (e) => {
+  cfg.fadeMs = Math.min(Math.round(+e.target.value * 1000), cfg.onMs / 2);
+  e.target.value = cfg.fadeMs / 1000; showTiming(); sendTiming();
+});
+function sendWd() { throttleSend("wd", () => `WD ${cfg.wdc} ${cfg.wdd}`); }
+$("wdd").addEventListener("input", (e) => {
+  cfg.wdd = +e.target.value * 10;
+  if (cfg.wdc < cfg.wdd + 50) cfg.wdc = cfg.wdd + 50;
+  showWd(); sendWd();
+});
+$("wdc").addEventListener("input", (e) => {
+  cfg.wdc = Math.max(+e.target.value * 10, cfg.wdd + 50);
+  showWd(); sendWd();
+});
+
+function showMute() {
+  $("snd").checked = !!cfg.snd;
+  $("sndHint").classList.toggle("mute-note", !cfg.snd);
+  $("sndHint").textContent = cfg.snd
+    ? "끄면 경고음도 꺼져요. 경고 조명과 화면 경고는 계속 동작하고, 대시보드를 다시 켜면 소리가 자동으로 켜져요."
+    : "지금 경고음이 꺼져 있어요. 대시보드 화면 위쪽에 MUTE가 표시돼요.";
+}
+function showPattern() {
+  document.querySelectorAll(".pat").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.pat === cfg.pat ? "true" : "false"));
+  const breath = cfg.pat === 0;
+  $("offRow").hidden = !breath;
+  $("fadeRow").hidden = !breath;
+  $("onLabel").textContent = breath ? "켜지는 시간" : cfg.pat === 1 ? "켜지는 시간 (계속 켜짐에는 쓰이지 않아요)" : "한 바퀴 도는 시간";
+}
+function showTiming() {
+  $("onT").value = cfg.onMs / 1000;   $("onOut").textContent = (cfg.onMs / 1000).toFixed(1) + "초";
+  $("offT").value = cfg.offMs / 1000; $("offOut").textContent = (cfg.offMs / 1000).toFixed(1) + "초";
+  $("fadeT").value = cfg.fadeMs / 1000; $("fadeOut").textContent = (cfg.fadeMs / 1000).toFixed(1) + "초";
+}
+function showWd() {
+  $("wdd").value = cfg.wdd / 10; $("wddOut").textContent = (cfg.wdd / 10) + "cm";
+  $("wdc").min = cfg.wdd / 10 + 5;
+  $("wdc").value = cfg.wdc / 10; $("wdcOut").textContent = (cfg.wdc / 10) + "cm";
+}
+
 $("vol").addEventListener("input", (e) => { cfg.vol = +e.target.value; $("volOut").textContent = cfg.vol; throttleSend("vol", () => `VOL ${cfg.vol}`); });
 $("bl").addEventListener("input", (e) => { cfg.bl = +e.target.value; $("blOut").textContent = cfg.bl + "%"; throttleSend("bl", () => `BL ${cfg.bl}`); });
 
 // ---------- 받은 데이터 해석 (사양서 14.4) ----------
 function onConfig(dv) {
   if (dv.byteLength < 8) return;
-  cfg = { r: dv.getUint8(0), g: dv.getUint8(1), b: dv.getUint8(2), bri: dv.getUint8(3),
-          lon: dv.getUint8(4), vol: dv.getUint8(5), bl: dv.getUint8(6), stby: dv.getUint8(7) };
+  const fl = dv.getUint8(7);
+  cfg.r = dv.getUint8(0); cfg.g = dv.getUint8(1); cfg.b = dv.getUint8(2); cfg.bri = dv.getUint8(3);
+  cfg.lon = dv.getUint8(4); cfg.vol = dv.getUint8(5); cfg.bl = dv.getUint8(6);
+  cfg.stby = fl & 1; cfg.snd = (fl & 2) ? 1 : 0; cfg.synced = (fl & 4) ? 1 : 0;
+  if (dv.byteLength >= 19) {
+    cfg.onMs = dv.getUint16(8, true); cfg.offMs = dv.getUint16(10, true); cfg.fadeMs = dv.getUint16(12, true);
+    cfg.pat = dv.getUint8(14); cfg.wdc = dv.getUint16(15, true); cfg.wdd = dv.getUint16(17, true);
+  }
+  showMute(); showPattern(); showTiming(); showWd();
   $("lon").checked = !!cfg.lon;
   $("stby").checked = !!cfg.stby;
   $("bri").value = cfg.bri; $("briOut").textContent = cfg.bri + "%";
@@ -342,8 +457,8 @@ function onStatus(dv) {
   front.classList.toggle("l1", level === 1);
   front.classList.toggle("l2", level === 2);
   $("frontMsg").textContent =
-    level === 2 ? "위험: 15cm 안에 물체가 있어요" :
-    level === 1 ? "주의: 30cm 안에 물체가 있어요" :
+    level === 2 ? `위험: ${cfg.wdd / 10}cm 안에 물체가 있어요` :
+    level === 1 ? `주의: ${cfg.wdc / 10}cm 안에 물체가 있어요` :
     (!okL && !okR) ? "거리 센서를 확인하세요" : "앞쪽이 비어 있어요";
 
   const battEl = $("batt");
@@ -364,7 +479,7 @@ function showDist(numId, barId, mm, ok) {
   // 가까울수록 막대가 길어짐 (60cm 이상이면 비어 있음)
   const near = valid ? Math.max(0, Math.min(1, (600 - mm) / 600)) : 0;
   bar.style.width = (near * 100) + "%";
-  bar.style.background = !valid ? "var(--milk)" : mm < 150 ? "var(--red)" : mm < 300 ? "var(--amber)" : "var(--milk)";
+  bar.style.background = !valid ? "var(--milk)" : mm < cfg.wdd ? "var(--red)" : mm < cfg.wdc ? "var(--amber)" : "var(--milk)";
 }
 
 // 앱 위쪽 차의 언더글로우를 실제 LED 동작과 비슷하게 표시
@@ -378,9 +493,18 @@ function paintGlow() {
   if (!cfg.lon || cfg.stby) { g.style.opacity = 0; return; }
   g.style.opacity = "";
   g.style.setProperty("--peak", (0.35 + 0.65 * (cfg.bri - 5) / 30).toFixed(2));
-  g.style.background = `rgb(${cfg.r},${cfg.g},${cfg.b})`;
-  g.classList.add("breathe");
+  g.style.background = cfg.pat === 3
+    ? "linear-gradient(90deg, #f0e000, #30d040, #00c8b4, #1e6bff, #b060ff, #ff20c0)"
+    : `rgb(${cfg.r},${cfg.g},${cfg.b})`;
+  if (cfg.pat === 0) {
+    g.style.animationDuration = ((cfg.onMs + cfg.offMs) / 1000) + "s";
+    g.classList.add("breathe");
+  } else {
+    g.style.animationDuration = "";
+    g.style.opacity = getComputedStyle(g).getPropertyValue("--peak") || 1;
+  }
 }
+showMute(); showPattern(); showTiming(); showWd();
 paintGlow();
 </script>
 </body>
