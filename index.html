@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#24122B">
+<title>푸쉬카 리모컨</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #24122B;      /* 배경: 깊은 자두색 밤 */
+    --dusk: #331C3C;       /* 패널 */
+    --dusk-2: #42274D;     /* 입력 바탕 */
+    --milk: #F6EEF2;       /* 글자 */
+    --haze: #B9A6C0;       /* 보조 글자 */
+    --glow: #FF1464;       /* 현재 LED 색 (실시간으로 바뀜) */
+    --amber: #FF7A1A;
+    --red: #FF2E3A;
+    --ok: #4FD18B;
+    --round: "Jua", "Gowun Dodum", system-ui, sans-serif;
+    --body: "Gowun Dodum", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--night); color: var(--milk); }
+  body {
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.5;
+    padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 0 18px; }
+
+  /* ---------- 상단: 차와 언더글로우 (이 화면의 주인공) ---------- */
+  .garage { padding: 22px 0 8px; text-align: center; }
+  .garage h1 { font-family: var(--round); font-weight: 400; font-size: 28px; margin: 0; letter-spacing: 0.5px; }
+  .garage .sub { color: var(--haze); font-size: 14px; margin-top: 2px; }
+  .car { position: relative; width: 240px; height: 120px; margin: 18px auto 6px; }
+  .car svg { position: relative; z-index: 2; width: 100%; height: 100%; }
+  .underglow {
+    position: absolute; left: 14%; right: 14%; bottom: 10px; height: 26px; z-index: 1;
+    border-radius: 50%; background: var(--glow); filter: blur(16px); opacity: 0;
+  }
+  .underglow.breathe { animation: breathe 5s linear infinite; }
+  .underglow.caution { background: var(--amber); animation: blink 0.5s steps(1) infinite; }
+  .underglow.danger  { background: var(--red);   animation: blink 0.2s steps(1) infinite; }
+  @keyframes breathe { 0% {opacity:0} 16% {opacity:var(--peak,1)} 44% {opacity:var(--peak,1)} 60% {opacity:0} 100% {opacity:0} }
+  @keyframes blink { 0% {opacity:1} 50% {opacity:0} }
+  @media (prefers-reduced-motion: reduce) {
+    .underglow.breathe { animation: none; opacity: var(--peak,1); }
+    .underglow.caution, .underglow.danger { animation: none; opacity: 1; }
+  }
+
+  .connect {
+    display: block; width: 100%; margin: 14px 0 6px; padding: 14px;
+    font-family: var(--round); font-size: 19px; color: var(--night);
+    background: var(--milk); border: 0; border-radius: 999px; cursor: pointer;
+  }
+  .connect.on { background: transparent; color: var(--milk); box-shadow: inset 0 0 0 2px var(--dusk-2); }
+  .connect:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--glow); outline-offset: 2px; }
+  .linkstate { text-align: center; color: var(--haze); font-size: 14px; min-height: 21px; }
+  .banner { margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: #4A1E2A; color: #FFD7DC; font-size: 14px; }
+
+  /* ---------- 앞쪽 거리 ---------- */
+  .front { margin: 22px 0 0; padding: 18px; border-radius: 22px; background: var(--dusk); }
+  .front .msg { font-family: var(--round); font-size: 20px; margin: 0 0 14px; }
+  .front.l1 { box-shadow: inset 0 0 0 2px var(--amber); }
+  .front.l2 { box-shadow: inset 0 0 0 3px var(--red); }
+  .sensors { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sensor .side { color: var(--haze); font-size: 14px; }
+  .sensor .cm { font-family: var(--round); font-size: 40px; line-height: 1.1; }
+  .sensor .cm small { font-size: 16px; color: var(--haze); margin-left: 3px; }
+  .meter { height: 8px; border-radius: 4px; background: var(--dusk-2); overflow: hidden; margin-top: 8px; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--milk); transition: width .2s; }
+
+  /* ---------- 상태 줄 ---------- */
+  .facts { margin: 14px 0 0; padding: 0 4px; }
+  .fact { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--dusk-2); }
+  .fact:last-child { border-bottom: 0; }
+  .fact span:first-child { color: var(--haze); }
+  .fact b { font-weight: 400; font-family: var(--round); font-size: 18px; }
+  .warn { color: var(--amber); }
+  .bad { color: var(--red); }
+
+  /* ---------- 리모컨 ---------- */
+  .remote { margin: 26px 0 0; }
+  .remote h2 { font-family: var(--round); font-weight: 400; font-size: 21px; margin: 22px 0 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; }
+  .row label { flex: 1; }
+  .hint { color: var(--haze); font-size: 13px; margin: 2px 0 0; }
+
+  .switch { position: relative; width: 56px; height: 32px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--dusk-2); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--milk); transition: transform .15s; }
+  .switch input:checked + span { background: var(--glow); }
+  .switch input:checked + span::after { transform: translateX(24px); }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 0 4px; }
+  .swatch { width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 3px rgba(0,0,0,.25); }
+  .swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--night), 0 0 0 6px var(--milk); }
+  .picker { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
+            background: conic-gradient(#ff1464, #b060ff, #1e6bff, #00c8b4, #30d040, #ff1464); }
+  .picker input { position: absolute; inset: -8px; width: 60px; height: 60px; opacity: 0; cursor: pointer; }
+
+  .slider { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 12px; padding: 8px 0; }
+  .slider output { font-family: var(--round); font-size: 18px; min-width: 52px; text-align: right; }
+  .slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--glow); height: 28px; }
+
+  fieldset { border: 0; margin: 0; padding: 0; }
+  fieldset:disabled { opacity: .45; }
+  .safety { margin: 28px 0 0; color: var(--haze); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <section class="garage">
+    <h1>푸쉬카 리모컨</h1>
+    <div class="sub">BMW 푸쉬카 대시보드</div>
+    <div class="car" aria-hidden="true">
+      <div class="underglow" id="glow"></div>
+      <svg viewBox="0 0 240 120">
+        <rect x="40" y="18" width="150" height="44" rx="18" fill="#F6EEF2"/>
+        <rect x="58" y="26" width="52" height="26" rx="5" fill="#24122B"/>
+        <rect x="118" y="26" width="52" height="26" rx="5" fill="#24122B"/>
+        <rect x="10" y="50" width="220" height="40" rx="18" fill="#F6EEF2"/>
+        <circle cx="62" cy="92" r="20" fill="#24122B"/>
+        <circle cx="178" cy="92" r="20" fill="#24122B"/>
+        <circle cx="62" cy="92" r="9" fill="#6B5A70"/>
+        <circle cx="178" cy="92" r="9" fill="#6B5A70"/>
+      </svg>
+    </div>
+    <div id="unsupported" class="banner" hidden>
+      이 브라우저는 블루투스 연결을 지원하지 않아요. 안드로이드 폰의 크롬에서 열어 주세요.
+    </div>
+    <button class="connect" id="connectBtn">연결하기</button>
+    <div class="linkstate" id="linkState">대시보드 전원을 켠 뒤 연결하기를 눌러 주세요</div>
+  </section>
+
+  <section class="front" id="front" aria-live="polite">
+    <p class="msg" id="frontMsg">연결하면 앞쪽 거리가 보여요</p>
+    <div class="sensors">
+      <div class="sensor"><div class="side">왼쪽</div><div class="cm" id="distL">--<small>cm</small></div><div class="meter"><i id="barL"></i></div></div>
+      <div class="sensor"><div class="side">오른쪽</div><div class="cm" id="distR">--<small>cm</small></div><div class="meter"><i id="barR"></i></div></div>
+    </div>
+  </section>
+
+  <section class="facts">
+    <div class="fact"><span>배터리</span><b id="batt">--</b></div>
+    <div class="fact"><span>배터리 온도</span><b id="battT">--</b></div>
+    <div class="fact"><span>바깥 공기</span><b id="air">--</b></div>
+    <div class="fact"><span>기압</span><b id="press">--</b></div>
+    <div class="fact"><span>켜진 시간</span><b id="uptime">--</b></div>
+  </section>
+
+  <fieldset class="remote" id="remote" disabled>
+    <h2>조명</h2>
+    <div class="row">
+      <label for="lon">차 밑 조명 켜기</label>
+      <span class="switch"><input type="checkbox" id="lon" role="switch"><span></span></span>
+    </div>
+    <div class="swatches" id="swatches" role="group" aria-label="조명 색">
+      <div class="picker" title="직접 고르기"><input type="color" id="custom" value="#ff1464" aria-label="직접 색 고르기"></div>
+    </div>
+    <p class="hint">주황과 빨강은 장애물 경고 색이라 목록에서 뺐어요. 흰색에 가까운 색은 전원 보호를 위해 자동으로 조금 어둡게 맞춰져요.</p>
+    <div class="slider">
+      <label for="bri">조명 밝기</label><output id="briOut">35%</output>
+      <input type="range" id="bri" min="5" max="35" step="1" value="35">
+    </div>
+
+    <h2>소리</h2>
+    <div class="slider">
+      <label for="vol">경고음 크기</label><output id="volOut">8</output>
+      <input type="range" id="vol" min="5" max="30" step="1" value="8">
+    </div>
+
+    <h2>화면</h2>
+    <div class="slider">
+      <label for="bl">화면 밝기</label><output id="blOut">70%</output>
+      <input type="range" id="bl" min="10" max="100" step="5" value="70">
+    </div>
+    <div class="row">
+      <label for="stby">대기 모드<p class="hint">화면과 차 밑 조명을 꺼요. 장애물이 가까워지면 화면이 다시 켜져요.</p></label>
+      <span class="switch"><input type="checkbox" id="stby" role="switch"><span></span></span>
+    </div>
+  </fieldset>
+
+  <p class="safety">장애물 경고음과 경고 조명은 안전을 위해 앱에서 끌 수 없어요.</p>
+</main>
+
+<script>
+// ---------- ESP32 펌웨어와 같은 값 (사양서 14장) ----------
+const SVC  = "ec560f9a-a440-453a-a0da-08eb331d0196";
+const CMD  = "ad4723c8-0a2b-4b57-92ae-16744438a6f1";
+const STAT = "9a2f4141-3759-4ffa-a5c1-4eeb323a6974";
+const CFG  = "c9691204-0ab1-488d-ab16-1f199fa7d9ff";
+
+const PRESETS = [
+  { name: "진한 분홍", rgb: [255, 20, 100] },
+  { name: "자홍",     rgb: [220, 30, 190] },
+  { name: "라벤더",   rgb: [150, 60, 255] },
+  { name: "파랑",     rgb: [30, 90, 255] },
+  { name: "청록",     rgb: [0, 190, 170] },
+  { name: "초록",     rgb: [40, 210, 60] },
+];
+
+const $ = (id) => document.getElementById(id);
+const enc = new TextEncoder();
+let device = null, cmdChar = null, writeChain = Promise.resolve();
+let cfg = { r: 255, g: 20, b: 100, bri: 35, lon: 1, vol: 8, bl: 70, stby: 0 };
+let level = 0;
+
+// ---------- 화면 준비 ----------
+if (!("bluetooth" in navigator)) {
+  $("unsupported").hidden = false;
+  $("connectBtn").disabled = true;
+}
+for (const p of PRESETS) {
+  const b = document.createElement("button");
+  b.className = "swatch";
+  b.style.background = `rgb(${p.rgb.join(",")})`;
+  b.setAttribute("aria-label", p.name);
+  b.setAttribute("aria-pressed", "false");
+  b.dataset.rgb = p.rgb.join(",");
+  b.addEventListener("click", () => setColor(...p.rgb));
+  $("swatches").insertBefore(b, $("swatches").lastElementChild);
+}
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// ---------- 연결 ----------
+$("connectBtn").addEventListener("click", async () => {
+  if (device && device.gatt.connected) { device.gatt.disconnect(); return; }
+  try {
+    if (!device) {
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [SVC] }, { namePrefix: "PUSHCAR" }],
+        optionalServices: [SVC],
+      });
+      device.addEventListener("gattserverdisconnected", onDisconnected);
+    }
+    setLink("연결하는 중이에요...");
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(SVC);
+    cmdChar = await svc.getCharacteristic(CMD);
+    const stat = await svc.getCharacteristic(STAT);
+    const conf = await svc.getCharacteristic(CFG);
+    stat.addEventListener("characteristicvaluechanged", (e) => onStatus(e.target.value));
+    conf.addEventListener("characteristicvaluechanged", (e) => onConfig(e.target.value));
+    await stat.startNotifications();
+    await conf.startNotifications();
+    onConfig(await conf.readValue());
+    onStatus(await stat.readValue());
+    $("remote").disabled = false;
+    $("connectBtn").textContent = "연결 끊기";
+    $("connectBtn").classList.add("on");
+    setLink(`${device.name || "PUSHCAR-DASH"}에 연결됐어요. 처음 조작할 때 PIN 입력 창이 뜨면 대시보드 PIN을 입력하세요.`);
+  } catch (err) {
+    if (err.name === "NotFoundError") setLink("기기 선택을 취소했어요");
+    else setLink(`연결하지 못했어요: ${err.message}. 대시보드 전원과 폰 블루투스를 확인하세요.`);
+  }
+});
+
+function onDisconnected() {
+  cmdChar = null;
+  $("remote").disabled = true;
+  $("connectBtn").textContent = "다시 연결하기";
+  $("connectBtn").classList.remove("on");
+  setLink("연결이 끊겼어요");
+}
+function setLink(t) { $("linkState").textContent = t; }
+
+// ---------- 명령 보내기 (한 번에 하나씩 순서대로) ----------
+function send(text) {
+  if (!cmdChar) return;
+  writeChain = writeChain
+    .then(() => cmdChar.writeValueWithResponse(enc.encode(text)))
+    .catch((err) => setLink(`명령을 보내지 못했어요: ${err.message}`));
+}
+// 슬라이더를 움직이는 동안 너무 자주 보내지 않도록 마지막 값만 0.15초 간격으로
+function throttleSend(key, makeText) {
+  const t = throttleSend.timers || (throttleSend.timers = {});
+  if (t[key]) { t[key].pending = true; return; }
+  send(makeText());
+  t[key] = { pending: false };
+  setTimeout(() => {
+    const again = t[key].pending;
+    t[key] = null;
+    if (again) send(makeText());
+  }, 150);
+}
+
+function setColor(r, g, b) {
+  cfg.r = r; cfg.g = g; cfg.b = b;
+  send(`LED ${r} ${g} ${b}`);
+  paintGlow();
+}
+$("custom").addEventListener("change", (e) => {
+  const h = e.target.value;
+  setColor(parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16));
+});
+$("lon").addEventListener("change", (e) => { cfg.lon = e.target.checked ? 1 : 0; send(`LON ${cfg.lon}`); paintGlow(); });
+$("stby").addEventListener("change", (e) => { cfg.stby = e.target.checked ? 1 : 0; send(`STBY ${cfg.stby}`); paintGlow(); });
+$("bri").addEventListener("input", (e) => { cfg.bri = +e.target.value; $("briOut").textContent = cfg.bri + "%"; paintGlow(); throttleSend("bri", () => `BRI ${cfg.bri}`); });
+$("vol").addEventListener("input", (e) => { cfg.vol = +e.target.value; $("volOut").textContent = cfg.vol; throttleSend("vol", () => `VOL ${cfg.vol}`); });
+$("bl").addEventListener("input", (e) => { cfg.bl = +e.target.value; $("blOut").textContent = cfg.bl + "%"; throttleSend("bl", () => `BL ${cfg.bl}`); });
+
+// ---------- 받은 데이터 해석 (사양서 14.4) ----------
+function onConfig(dv) {
+  if (dv.byteLength < 8) return;
+  cfg = { r: dv.getUint8(0), g: dv.getUint8(1), b: dv.getUint8(2), bri: dv.getUint8(3),
+          lon: dv.getUint8(4), vol: dv.getUint8(5), bl: dv.getUint8(6), stby: dv.getUint8(7) };
+  $("lon").checked = !!cfg.lon;
+  $("stby").checked = !!cfg.stby;
+  $("bri").value = cfg.bri; $("briOut").textContent = cfg.bri + "%";
+  $("vol").value = cfg.vol; $("volOut").textContent = cfg.vol;
+  $("bl").value = cfg.bl;   $("blOut").textContent = cfg.bl + "%";
+  const hex = "#" + [cfg.r, cfg.g, cfg.b].map((v) => v.toString(16).padStart(2, "0")).join("");
+  $("custom").value = hex;
+  document.querySelectorAll(".swatch").forEach((s) => {
+    s.setAttribute("aria-pressed", s.dataset.rgb === `${cfg.r},${cfg.g},${cfg.b}` ? "true" : "false");
+  });
+  paintGlow();
+}
+
+function onStatus(dv) {
+  if (dv.byteLength < 20) return;
+  const dL = dv.getUint16(0, true), dR = dv.getUint16(2, true);
+  level = dv.getUint8(4);
+  const soc = dv.getUint8(5), mv = dv.getUint16(6, true);
+  const bt = dv.getInt16(8, true) / 10, air = dv.getInt16(10, true) / 10;
+  const rh = dv.getUint8(12), hpa = dv.getUint16(13, true) / 10;
+  const f = dv.getUint8(15), up = dv.getUint16(16, true);
+  const okL = f & 1, okR = f & 2, okBatt = f & 4, okEnv = f & 8;
+
+  showDist("distL", "barL", dL, okL);
+  showDist("distR", "barR", dR, okR);
+  const front = $("front");
+  front.classList.toggle("l1", level === 1);
+  front.classList.toggle("l2", level === 2);
+  $("frontMsg").textContent =
+    level === 2 ? "위험: 15cm 안에 물체가 있어요" :
+    level === 1 ? "주의: 30cm 안에 물체가 있어요" :
+    (!okL && !okR) ? "거리 센서를 확인하세요" : "앞쪽이 비어 있어요";
+
+  const battEl = $("batt");
+  battEl.textContent = okBatt ? `${soc}%  (${(mv / 1000).toFixed(1)}V)` : "읽지 못함";
+  battEl.className = !okBatt ? "" : soc < 10 ? "bad" : soc < 20 ? "warn" : "";
+  $("battT").textContent = okBatt ? `${bt.toFixed(1)}°C` : "--";
+  $("air").textContent = okEnv ? `${air.toFixed(1)}°C  습도 ${rh}%` : "읽지 못함";
+  $("press").textContent = okEnv && hpa > 0 ? `${hpa.toFixed(0)} hPa` : "--";
+  const h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60), s = up % 60;
+  $("uptime").textContent = h ? `${h}시간 ${m}분` : `${m}분 ${s}초`;
+  paintGlow();
+}
+
+function showDist(numId, barId, mm, ok) {
+  const valid = ok && mm !== 0xFFFF;
+  $(numId).innerHTML = valid ? `${(mm / 10).toFixed(1)}<small>cm</small>` : `--<small>cm</small>`;
+  const bar = $(barId);
+  // 가까울수록 막대가 길어짐 (60cm 이상이면 비어 있음)
+  const near = valid ? Math.max(0, Math.min(1, (600 - mm) / 600)) : 0;
+  bar.style.width = (near * 100) + "%";
+  bar.style.background = !valid ? "var(--milk)" : mm < 150 ? "var(--red)" : mm < 300 ? "var(--amber)" : "var(--milk)";
+}
+
+// 앱 위쪽 차의 언더글로우를 실제 LED 동작과 비슷하게 표시
+function paintGlow() {
+  const g = $("glow");
+  g.className = "underglow";
+  g.style.setProperty("--glow", `rgb(${cfg.r},${cfg.g},${cfg.b})`);
+  g.style.background = "";
+  if (level === 2) { g.classList.add("danger"); return; }
+  if (level === 1) { g.classList.add("caution"); return; }
+  if (!cfg.lon || cfg.stby) { g.style.opacity = 0; return; }
+  g.style.opacity = "";
+  g.style.setProperty("--peak", (0.35 + 0.65 * (cfg.bri - 5) / 30).toFixed(2));
+  g.style.background = `rgb(${cfg.r},${cfg.g},${cfg.b})`;
+  g.classList.add("breathe");
+}
+paintGlow();
+</script>
+</body>
+</html>
