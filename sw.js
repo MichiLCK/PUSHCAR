@@ -1,5 +1,5 @@
 // 앱 화면을 폰에 저장해 두고, 오프라인에서도 바로 열리게 하는 서비스 워커
-const CACHE = "pushcar-v4";
+const CACHE = "pushcar-v7";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
