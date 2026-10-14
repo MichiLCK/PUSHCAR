@@ -242,7 +242,7 @@
     <h2>자동 절전</h2>
     <div class="slider">
       <label for="slp">연결이 끊긴 뒤 절전까지</label><output id="slpOut">30분</output>
-      <input type="range" id="slp" min="0" max="240" step="5" value="30">
+      <input type="range" id="slp" min="0" max="38" step="1" value="15">
     </div>
     <p class="hint">폰 연결이 끊긴 채로 이 시간이 지나면 조명, 화면, 소리, 센서를 모두 끄고 블루투스만 켜 둬요. 절전 중에는 장애물 경고도 꺼지고, 앱으로 다시 연결하면 깨어나요. 0분이면 자동 절전을 쓰지 않아요.</p>
   </fieldset>
@@ -384,12 +384,23 @@ $("fadeT").addEventListener("input", (e) => {
   cfg.fadeMs = Math.min(Math.round(+e.target.value * 1000), cfg.onMs / 2);
   e.target.value = cfg.fadeMs / 1000; showTiming(); sendTiming();
 });
+// 슬라이더 칸 -> 분: 0~10분은 1분, 15~60분은 5분, 70~240분은 10분 단위
+const SLP_STEPS = [];
+for (let m = 0; m <= 10; m++) SLP_STEPS.push(m);
+for (let m = 15; m <= 60; m += 5) SLP_STEPS.push(m);
+for (let m = 70; m <= 240; m += 10) SLP_STEPS.push(m);
+function slpIndex(min) {
+  let best = 0;
+  SLP_STEPS.forEach((v, i) => { if (Math.abs(v - min) < Math.abs(SLP_STEPS[best] - min)) best = i; });
+  return best;
+}
 function showSlp() {
-  $("slp").value = cfg.slp;
+  $("slp").max = SLP_STEPS.length - 1;
+  $("slp").value = slpIndex(cfg.slp);
   const h = Math.floor(cfg.slp / 60), m = cfg.slp % 60;
   $("slpOut").textContent = cfg.slp === 0 ? "끄기" : (h ? `${h}시간` : "") + (h && m ? " " : "") + (m ? `${m}분` : "");
 }
-$("slp").addEventListener("input", (e) => { cfg.slp = +e.target.value; showSlp(); throttleSend("slp", () => `SLP ${cfg.slp}`); });
+$("slp").addEventListener("input", (e) => { cfg.slp = SLP_STEPS[+e.target.value]; showSlp(); throttleSend("slp", () => `SLP ${cfg.slp}`); });
 function sendWd() { throttleSend("wd", () => `WD ${cfg.wdc} ${cfg.wdd}`); }
 $("wdd").addEventListener("input", (e) => {
   cfg.wdd = +e.target.value * 10;
